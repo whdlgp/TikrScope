@@ -1,0 +1,7 @@
+pandas
+plotly
+PyQt5
+PyQt5_sip
+pytz
+qt_material
+yfinance
