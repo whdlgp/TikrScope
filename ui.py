@@ -104,16 +104,31 @@ class StockApp(QWidget):
             self.period_group.addButton(rb)
             period_layout.addWidget(rb)
 
+        indicator_layout = QHBoxLayout()
         self.sma_group = {}
-        sma_layout = QHBoxLayout()
-        sma_layout.setAlignment(Qt.AlignLeft)
+        indicator_layout.setAlignment(Qt.AlignLeft)
         for period in [5, 20, 60, 120]:
             cb = QCheckBox(f"SMA{period}")
             if period in self.config.get("sma_periods", []):
                 cb.setChecked(True)
             cb.clicked.connect(self.change_sma_periods)
             self.sma_group[period] = cb
-            sma_layout.addWidget(cb)
+            indicator_layout.addWidget(cb)
+
+        sub_indicator_layout = QHBoxLayout()
+        sub_indicator_layout.setAlignment(Qt.AlignLeft)
+        self.sub_indicator_group = QButtonGroup()
+        self.sub_indicators = {
+            "williams_r": "Williams %R"
+            # TODO: "macd": "MACD", "rsi": "RSI"
+        }
+        for key, label in self.sub_indicators.items():
+            rb = QRadioButton(label)
+            rb.clicked.connect(self.change_sub_indicator)
+            self.sub_indicator_group.addButton(rb)
+            sub_indicator_layout.addWidget(rb)
+            if self.config.get("sub_indicator", "williams_r") == key:
+                rb.setChecked(True)
 
         self.auto_refresh_checkbox = QCheckBox("Auto Refresh (30 sec)")
         self.auto_refresh_checkbox.stateChanged.connect(self.toggle_auto_refresh)
@@ -124,7 +139,8 @@ class StockApp(QWidget):
         options_layout = QVBoxLayout()
         options_layout.addLayout(chart_layout)
         options_layout.addLayout(period_layout)
-        options_layout.addLayout(sma_layout)
+        options_layout.addLayout(indicator_layout)
+        options_layout.addLayout(sub_indicator_layout)
         refresh_layout = QHBoxLayout()
         refresh_layout.addWidget(self.auto_refresh_checkbox)
         refresh_layout.addWidget(self.manual_update_btn)
@@ -192,6 +208,16 @@ class StockApp(QWidget):
         save_config(CONFIG_PATH, self.config)
         self.update_plot()
 
+    def change_sub_indicator(self):
+        checked_button = self.sub_indicator_group.checkedButton()
+        if checked_button:
+            for key, label in self.sub_indicators.items():
+                if checked_button.text() == label:
+                    self.config["sub_indicator"] = key
+                    save_config(CONFIG_PATH, self.config)
+                    self.update_plot()
+                    break
+
     def change_timezone(self, tz):
         self.config["timezone"] = tz
         save_config(CONFIG_PATH, self.config)
@@ -213,7 +239,15 @@ class StockApp(QWidget):
     def update_plot(self):
         ticker = self.get_selected_ticker()
         df = fetch_market_data(ticker, self.config["period"], self.config["timezone"])
-        html = create_plot_html(df, ticker, self.config["period"], self.config["chart_type"], self.config["timezone"], self.config["theme"], self.config["sma_periods"])
+        html = create_plot_html(
+            df, ticker,
+            self.config["period"],
+            self.config["chart_type"],
+            self.config["timezone"],
+            self.config["theme"],
+            self.config["sma_periods"],
+            self.config["sub_indicator"]
+        )
         self.web_view.setHtml(html)
 
     def toggle_auto_refresh(self, state):

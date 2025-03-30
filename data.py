@@ -2,8 +2,9 @@ from pathlib import Path
 import json
 import yfinance as yf
 import pandas as pd
-import plotly.express as px
+from plotly.subplots import make_subplots
 import plotly.graph_objects as go
+import plotly.express as px
 
 CONFIG_PATH = Path("config.json")
 
@@ -16,7 +17,9 @@ def load_config(path=CONFIG_PATH):
         "timezone": "Asia/Seoul",
         "chart_type": "line",
         "period": "1y",
-        "theme": "default"
+        "theme": "default",
+        "sma_periods": [5, 20, 60, 120],
+        "sub_indicator": "williams_r"
     }
 
 def save_config(path, config):
@@ -62,49 +65,88 @@ def create_thumbnail(ticker, timezone="Asia/Seoul", force_update=False):
 
     return str(thumb_path)
 
-def create_plot_html(df, ticker, period, chart_type="line", timezone="Asia/Seoul", theme="default", sma_periods=[]):
-    if df.empty:
-        return "<h2>No data available.</h2>"
-    
-    df_plot = df.reset_index()
-
+def init_figure(ticker, sub_indicator, theme):
     is_dark = "dark" in theme.lower()
-    plotly_template = "plotly_dark" if is_dark else "plotly"
+    template = "plotly_dark" if is_dark else "plotly"
+    fig = make_subplots(
+        rows=2, cols=1,
+        shared_xaxes=True,
+        row_heights=[0.7, 0.3],
+        vertical_spacing=0.03,
+        subplot_titles=[f"{ticker.upper()} Chart", sub_indicator.replace('_', ' ').title()]
+    )
+    fig.update_layout(
+        template=template,
+        margin=dict(t=40, b=40),
+        dragmode="zoom"
+    )
+    fig.update_xaxes(fixedrange=False)
+    fig.update_yaxes(autorange=True, fixedrange=False)
+    return fig
 
+def price_trace(df, chart_type, date_col):
     if chart_type == "line":
-        fig = px.line(
-            df_plot, x=df_plot.columns[0], y="Close",
-            title=f"{ticker.upper()} Closing Prices ({period})",
-            labels={df_plot.columns[0]: f"Time ({timezone})", "Close": "Close Price (USD)"}
-        )
-        fig.update_layout(
-            template=plotly_template,
-            xaxis=dict(rangeslider=dict(visible=True)),
-            yaxis=dict(autorange=True, fixedrange=False),
+        return go.Scatter(
+            x=df[date_col],
+            y=df["Close"],
+            name="Close",
+            mode="lines"
         )
     else:
-        fig = go.Figure(data=[go.Candlestick(
-            x=df_plot[df_plot.columns[0]],
-            open=df_plot["Open"], high=df_plot["High"],
-            low=df_plot["Low"], close=df_plot["Close"]
-        )])
-        fig.update_layout(
-            template=plotly_template,
-            title=f"{ticker.upper()} Candlestick Chart ({period})",
-            xaxis_title=f"Time ({timezone})",
-            yaxis_title="Price (USD)",
-            xaxis=dict(rangeslider=dict(visible=True)),
-            yaxis=dict(autorange=True, fixedrange=False),
+        return go.Candlestick(
+            x=df[date_col],
+            open=df["Open"], high=df["High"],
+            low=df["Low"], close=df["Close"],
+            name="Candlestick"
         )
 
-    for p in sma_periods:
-        df_plot[f"SMA{p}"] = df_plot["Close"].rolling(p).mean()
+def add_sma(fig, df, periods, date_col):
+    for p in periods:
+        df[f"SMA{p}"] = df["Close"].rolling(p).mean()
         fig.add_trace(go.Scatter(
-            x=df_plot[df_plot.columns[0]],
-            y=df_plot[f"SMA{p}"],
+            x=df[date_col],
+            y=df[f"SMA{p}"],
             mode="lines",
             name=f"SMA{p}",
             line=dict(width=1)
-        ))
+        ), row=1, col=1)
+
+def add_williams_r(fig, df, date_col, period=14):
+    high = df["High"].rolling(period).max()
+    low = df["Low"].rolling(period).min()
+    df["Williams %R"] = (high - df["Close"]) / (high - low) * -100
+
+    fig.add_trace(go.Scatter(
+        x=df[date_col],
+        y=df["Williams %R"],
+        name="Williams %R",
+        mode="lines",
+        line=dict(color='orange', width=1)
+    ), row=2, col=1)
+
+    for level in [-20, -80]:
+        fig.add_shape(
+            type="line",
+            x0=df[date_col].iloc[0],
+            x1=df[date_col].iloc[-1],
+            y0=level,
+            y1=level,
+            line=dict(color="gray", dash="dot"),
+            row=2, col=1
+        )
+
+def create_plot_html(df, ticker, period, chart_type="line", timezone="Asia/Seoul", theme="default", sma_periods=[], sub_indicator="williams_r"):
+    if df.empty:
+        return "<h2>No data available.</h2>"
+
+    df = df.reset_index()
+    date_col = df.columns[0]
+    fig = init_figure(ticker, sub_indicator, theme)
+
+    fig.add_trace(price_trace(df, chart_type, date_col), row=1, col=1)
+    add_sma(fig, df, sma_periods, date_col)
+
+    if sub_indicator == "williams_r":
+        add_williams_r(fig, df, date_col)
 
     return fig.to_html(include_plotlyjs='cdn')
