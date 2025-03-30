@@ -107,7 +107,8 @@ class StockApp(QWidget):
         indicator_layout = QHBoxLayout()
         self.main_indicator_group = {}
         indicator_layout.setAlignment(Qt.AlignLeft)
-        for indicator in self.config.get("main_indicator", []):
+        main_indicators = ["sma5", "sma20", "sma60", "sma120", "vwap"]
+        for indicator in main_indicators:
             cb = QCheckBox(indicator.upper())
             cb.setChecked(indicator in self.config.get("main_indicator", []))
             cb.clicked.connect(self.change_main_indicator)
@@ -206,7 +207,7 @@ class StockApp(QWidget):
     def change_main_indicator(self):
         selected_indicators = [indicator for indicator, cb in self.main_indicator_group.items() if cb.isChecked()]
         self.config["main_indicator"] = selected_indicators
-        save_config(CONFIG_PATH, self.config)  # 일관되게 설정 저장
+        save_config(CONFIG_PATH, self.config)
         self.update_plot()
 
     def change_sub_indicator(self):
