@@ -135,6 +135,84 @@ def add_williams_r(fig, df, date_col, period=14):
             row=2, col=1
         )
 
+def add_mfi(fig, df, date_col, period=14):
+    tp = (df["High"] + df["Low"] + df["Close"]) / 3
+    mf = tp * df["Volume"]
+    direction = tp.diff() > 0
+
+    pos_mf = mf.where(direction, 0).rolling(period).sum()
+    neg_mf = mf.where(~direction, 0).rolling(period).sum()
+
+    mfi = 100 - (100 / (1 + (pos_mf / neg_mf)))
+    df["MFI"] = mfi
+
+    fig.add_trace(go.Scatter(
+        x=df[date_col],
+        y=df["MFI"],
+        name="MFI",
+        mode="lines",
+        line=dict(color="green", width=1)
+    ), row=2, col=1)
+
+    for level in [20, 80]:
+        fig.add_shape(
+            type="line",
+            x0=df[date_col].iloc[0],
+            x1=df[date_col].iloc[-1],
+            y0=level,
+            y1=level,
+            line=dict(color="gray", dash="dot"),
+            row=2, col=1
+        )
+
+def add_stoch_rsi(fig, df, date_col, period=14, smooth_k=3, smooth_d=3):
+    delta = df["Close"].diff()
+    gain = delta.where(delta > 0, 0)
+    loss = -delta.where(delta < 0, 0)
+
+    avg_gain = gain.rolling(period).mean()
+    avg_loss = loss.rolling(period).mean()
+
+    rs = avg_gain / avg_loss
+    rsi = 100 - (100 / (1 + rs))
+
+    min_rsi = rsi.rolling(period).min()
+    max_rsi = rsi.rolling(period).max()
+
+    stoch_rsi = (rsi - min_rsi) / (max_rsi - min_rsi)
+    k = stoch_rsi.rolling(smooth_k).mean() * 100
+    d = k.rolling(smooth_d).mean()
+
+    df["StochRSI_K"] = k
+    df["StochRSI_D"] = d
+
+    fig.add_trace(go.Scatter(
+        x=df[date_col],
+        y=df["StochRSI_K"],
+        name="%K",
+        mode="lines",
+        line=dict(color="blue", width=1)
+    ), row=2, col=1)
+
+    fig.add_trace(go.Scatter(
+        x=df[date_col],
+        y=df["StochRSI_D"],
+        name="%D",
+        mode="lines",
+        line=dict(color="orange", width=1)
+    ), row=2, col=1)
+
+    for level in [20, 80]:
+        fig.add_shape(
+            type="line",
+            x0=df[date_col].iloc[0],
+            x1=df[date_col].iloc[-1],
+            y0=level,
+            y1=level,
+            line=dict(color="gray", dash="dot"),
+            row=2, col=1
+        )
+
 def create_plot_html(df, ticker, chart_type="line", theme="default", sma_periods=[], sub_indicator="williams_r"):
     if df.empty:
         return "<h2>No data available.</h2>"
@@ -148,5 +226,9 @@ def create_plot_html(df, ticker, chart_type="line", theme="default", sma_periods
 
     if sub_indicator == "williams_r":
         add_williams_r(fig, df, date_col)
+    elif sub_indicator == "mfi":
+        add_mfi(fig, df, date_col)
+    elif sub_indicator == "stoch_rsi":
+        add_stoch_rsi(fig, df, date_col)
 
     return fig.to_html(include_plotlyjs='cdn')

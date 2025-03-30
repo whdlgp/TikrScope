@@ -119,8 +119,9 @@ class StockApp(QWidget):
         sub_indicator_layout.setAlignment(Qt.AlignLeft)
         self.sub_indicator_group = QButtonGroup()
         self.sub_indicators = {
-            "williams_r": "Williams %R"
-            # TODO: "macd": "MACD", "rsi": "RSI"
+            "williams_r": "Williams %R",
+            "mfi": "MFI (Money Flow Index)",
+            "stoch_rsi": "Stochastic RSI"
         }
         for key, label in self.sub_indicators.items():
             rb = QRadioButton(label)
