@@ -79,7 +79,8 @@ def create_plot_html(df, ticker, period, chart_type="line", timezone="Asia/Seoul
         )
         fig.update_layout(
             template=plotly_template,
-            xaxis=dict(rangeslider=dict(visible=True))
+            xaxis=dict(rangeslider=dict(visible=True)),
+            yaxis=dict(autorange=True, fixedrange=False),
         )
     else:
         fig = go.Figure(data=[go.Candlestick(
@@ -92,7 +93,8 @@ def create_plot_html(df, ticker, period, chart_type="line", timezone="Asia/Seoul
             title=f"{ticker.upper()} Candlestick Chart ({period})",
             xaxis_title=f"Time ({timezone})",
             yaxis_title="Price (USD)",
-            xaxis=dict(rangeslider=dict(visible=True))
+            xaxis=dict(rangeslider=dict(visible=True)),
+            yaxis=dict(autorange=True, fixedrange=False),
         )
 
     for p in sma_periods:
