@@ -78,7 +78,8 @@ def init_figure(ticker, sub_indicator, theme):
     fig.update_layout(
         template=template,
         margin=dict(t=40, b=40),
-        dragmode="zoom"
+        dragmode="zoom",
+        xaxis_rangeslider_visible=False
     )
     fig.update_xaxes(fixedrange=False)
     fig.update_yaxes(autorange=True, fixedrange=False)
