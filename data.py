@@ -18,7 +18,7 @@ def load_config(path=CONFIG_PATH):
         "chart_type": "line",
         "period": "1y",
         "theme": "default",
-        "sma_periods": [5, 20, 60, 120],
+        "main_indicator": ["sma5", "sma20", "sma60", "sma120", "vwap"],
         "sub_indicator": "williams_r"
     }
 
@@ -110,6 +110,16 @@ def add_sma(fig, df, periods, date_col):
             name=f"SMA{p}",
             line=dict(width=1)
         ), row=1, col=1)
+
+def add_vwap(fig, df, date_col):
+    vwap = (df["Volume"] * (df["High"] + df["Low"] + df["Close"]) / 3).cumsum() / df["Volume"].cumsum()
+    fig.add_trace(go.Scatter(
+        x=df[date_col],
+        y=vwap,
+        name="VWAP",
+        mode="lines",
+        line=dict(color="purple", width=1)
+    ), row=1, col=1)
 
 def add_williams_r(fig, df, date_col, period=14):
     high = df["High"].rolling(period).max()
@@ -213,7 +223,7 @@ def add_stoch_rsi(fig, df, date_col, period=14, smooth_k=3, smooth_d=3):
             row=2, col=1
         )
 
-def create_plot_html(df, ticker, chart_type="line", theme="default", sma_periods=[], sub_indicator="williams_r"):
+def create_plot_html(df, ticker, chart_type="line", theme="default", main_indicator=[], sub_indicator="williams_r"):
     if df.empty:
         return "<h2>No data available.</h2>"
 
@@ -222,7 +232,13 @@ def create_plot_html(df, ticker, chart_type="line", theme="default", sma_periods
     fig = init_figure(ticker, sub_indicator, theme)
 
     fig.add_trace(price_trace(df, chart_type, date_col), row=1, col=1)
-    add_sma(fig, df, sma_periods, date_col)
+
+    for indicator in main_indicator:
+        if "sma" in indicator:
+            period = int(indicator[3:])
+            add_sma(fig, df, [period], date_col)
+        elif indicator == "vwap":
+            add_vwap(fig, df, date_col)
 
     if sub_indicator == "williams_r":
         add_williams_r(fig, df, date_col)

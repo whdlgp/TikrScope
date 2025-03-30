@@ -105,14 +105,13 @@ class StockApp(QWidget):
             period_layout.addWidget(rb)
 
         indicator_layout = QHBoxLayout()
-        self.sma_group = {}
+        self.main_indicator_group = {}
         indicator_layout.setAlignment(Qt.AlignLeft)
-        for period in [5, 20, 60, 120]:
-            cb = QCheckBox(f"SMA{period}")
-            if period in self.config.get("sma_periods", []):
-                cb.setChecked(True)
-            cb.clicked.connect(self.change_sma_periods)
-            self.sma_group[period] = cb
+        for indicator in self.config.get("main_indicator", []):
+            cb = QCheckBox(indicator.upper())
+            cb.setChecked(indicator in self.config.get("main_indicator", []))
+            cb.clicked.connect(self.change_main_indicator)
+            self.main_indicator_group[indicator] = cb
             indicator_layout.addWidget(cb)
 
         sub_indicator_layout = QHBoxLayout()
@@ -204,9 +203,10 @@ class StockApp(QWidget):
         save_config(CONFIG_PATH, self.config)
         self.update_plot()
 
-    def change_sma_periods(self):
-        self.config["sma_periods"] = [p for p, cb in self.sma_group.items() if cb.isChecked()]
-        save_config(CONFIG_PATH, self.config)
+    def change_main_indicator(self):
+        selected_indicators = [indicator for indicator, cb in self.main_indicator_group.items() if cb.isChecked()]
+        self.config["main_indicator"] = selected_indicators
+        save_config(CONFIG_PATH, self.config)  # 일관되게 설정 저장
         self.update_plot()
 
     def change_sub_indicator(self):
@@ -244,7 +244,7 @@ class StockApp(QWidget):
             df, ticker,
             self.config["chart_type"],
             self.config["theme"],
-            self.config["sma_periods"],
+            self.config["main_indicator"],
             self.config["sub_indicator"]
         )
         self.web_view.setHtml(html)
