@@ -135,7 +135,7 @@ def add_williams_r(fig, df, date_col, period=14):
             row=2, col=1
         )
 
-def create_plot_html(df, ticker, period, chart_type="line", timezone="Asia/Seoul", theme="default", sma_periods=[], sub_indicator="williams_r"):
+def create_plot_html(df, ticker, chart_type="line", theme="default", sma_periods=[], sub_indicator="williams_r"):
     if df.empty:
         return "<h2>No data available.</h2>"
 

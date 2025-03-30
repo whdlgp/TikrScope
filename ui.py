@@ -241,9 +241,7 @@ class StockApp(QWidget):
         df = fetch_market_data(ticker, self.config["period"], self.config["timezone"])
         html = create_plot_html(
             df, ticker,
-            self.config["period"],
             self.config["chart_type"],
-            self.config["timezone"],
             self.config["theme"],
             self.config["sma_periods"],
             self.config["sub_indicator"]
