@@ -62,7 +62,7 @@ def create_thumbnail(ticker, timezone="Asia/Seoul", force_update=False):
 
     return str(thumb_path)
 
-def create_plot_html(df, ticker, period, chart_type="line", timezone="Asia/Seoul", theme="default"):
+def create_plot_html(df, ticker, period, chart_type="line", timezone="Asia/Seoul", theme="default", sma_periods=[]):
     if df.empty:
         return "<h2>No data available.</h2>"
     
@@ -94,5 +94,15 @@ def create_plot_html(df, ticker, period, chart_type="line", timezone="Asia/Seoul
             yaxis_title="Price (USD)",
             xaxis=dict(rangeslider=dict(visible=True))
         )
+
+    for p in sma_periods:
+        df_plot[f"SMA{p}"] = df_plot["Close"].rolling(p).mean()
+        fig.add_trace(go.Scatter(
+            x=df_plot[df_plot.columns[0]],
+            y=df_plot[f"SMA{p}"],
+            mode="lines",
+            name=f"SMA{p}",
+            line=dict(width=1)
+        ))
 
     return fig.to_html(include_plotlyjs='cdn')
