@@ -3,14 +3,15 @@ import pytz
 from PyQt5.QtWidgets import (
     QWidget, QLabel, QRadioButton, QCheckBox, QPushButton,
     QVBoxLayout, QHBoxLayout, QButtonGroup, QListWidget, QListWidgetItem,
-    QSplitter, QLineEdit, QComboBox, QMessageBox
+    QSplitter, QLineEdit, QComboBox, QMessageBox, QDialog, QFrame
 )
-from PyQt5.QtCore import QTimer, Qt, QSize
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtCore import QTimer, Qt, QSize, QUrl
+from PyQt5.QtGui import QPixmap, QDesktopServices, QFont
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from qt_material import list_themes
 
 from data import fetch_market_data, create_plot_html, create_thumbnail, CONFIG_PATH, load_config, save_config
+from tickernews import build_search_queries, fetch_news_for_queries
 
 def create_thumbnail_widget(ticker, timezone, force_update=False):
     thumb_path = create_thumbnail(ticker, timezone, force_update)
@@ -137,6 +138,9 @@ class StockApp(QWidget):
         self.manual_update_btn = QPushButton("Update Plot Now")
         self.manual_update_btn.clicked.connect(self.update_plot)
 
+        self.search_news_btn = QPushButton("Search News")
+        self.search_news_btn.clicked.connect(self.search_news)
+
         options_layout = QVBoxLayout()
         options_layout.addLayout(chart_layout)
         options_layout.addLayout(period_layout)
@@ -145,6 +149,7 @@ class StockApp(QWidget):
         refresh_layout = QHBoxLayout()
         refresh_layout.addWidget(self.auto_refresh_checkbox)
         refresh_layout.addWidget(self.manual_update_btn)
+        refresh_layout.addWidget(self.search_news_btn)
         options_layout.addLayout(refresh_layout)
 
         right_layout = QVBoxLayout()
@@ -249,6 +254,79 @@ class StockApp(QWidget):
             self.config["sub_indicator"]
         )
         self.web_view.setHtml(html)
+
+    def search_news(self):
+        ticker = self.get_selected_ticker()
+        queries = build_search_queries(ticker)
+        news = fetch_news_for_queries(queries, days=5)
+
+        if not news:
+            QMessageBox.information(self, "News", "No news found.")
+            return
+
+        class NewsItemWidget(QWidget):
+            def __init__(self, published, title, link):
+                super().__init__()
+
+                time_label = QLabel(published)
+                title_label = QLabel(title)
+                title_label.setWordWrap(True)
+                title_label.setFont(QFont("", weight=QFont.Bold))
+
+                open_button = QPushButton("Open")
+                open_button.setMinimumWidth(60)
+                open_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(link)))
+
+                button_layout = QHBoxLayout()
+                button_layout.addStretch()
+                button_layout.addWidget(open_button)
+
+                inner_layout = QVBoxLayout()
+                inner_layout.addWidget(time_label)
+                inner_layout.addWidget(title_label)
+                inner_layout.addLayout(button_layout)
+                inner_layout.setSpacing(6)
+                inner_layout.setContentsMargins(12, 12, 12, 12)
+
+                frame = QFrame()
+                frame.setLayout(inner_layout)
+                frame.setFrameShape(QFrame.StyledPanel)
+
+                outer_layout = QVBoxLayout()
+                outer_layout.addWidget(frame)
+                outer_layout.setContentsMargins(0, 0, 0, 0)
+                self.setLayout(outer_layout)
+
+        class NewsDialog(QDialog):
+            def __init__(self, news_items, parent=None, ticker=""):
+                super().__init__(parent)
+                self.setWindowTitle(f"News: {ticker}")
+                self.setMinimumSize(750, 600)
+
+                self.list_widget = QListWidget()
+                self.list_widget.setSpacing(8)
+
+                for item in news_items:
+                    published = item["published"].strftime("%Y-%m-%d %H:%M")
+                    title = item["title"]
+                    link = item["link"]
+
+                    widget = NewsItemWidget(published, title, link)
+                    list_item = QListWidgetItem()
+                    list_item.setSizeHint(widget.sizeHint())
+
+                    self.list_widget.addItem(list_item)
+                    self.list_widget.setItemWidget(list_item, widget)
+
+                layout = QVBoxLayout()
+                layout.addWidget(self.list_widget)
+                self.setLayout(layout)
+
+        dialog = NewsDialog(news, None, ticker)
+        self.news_dialogs = getattr(self, "news_dialogs", [])
+        dialog.destroyed.connect(lambda: self.news_dialogs.remove(dialog))
+        self.news_dialogs.append(dialog)
+        dialog.show()
 
     def toggle_auto_refresh(self, state):
         if state == 2:
