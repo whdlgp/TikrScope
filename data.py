@@ -65,6 +65,21 @@ def create_thumbnail(ticker, timezone="Asia/Seoul", force_update=False):
 
     return str(thumb_path)
 
+def calculate_price_changes(df):
+    latest_price = df["Close"].iloc[-1]
+    date_index = df.index
+
+    def get_change(days):
+        try:
+            ref_date = date_index[-1] - pd.Timedelta(days=days)
+            past_price = df[df.index <= ref_date]["Close"].iloc[-1]
+            change = (latest_price - past_price) / past_price * 100
+            return change
+        except Exception:
+            return None
+
+    return [get_change(d) for d in [1, 7, 30, 180, 365]]
+
 def init_figure(ticker, sub_indicator, theme):
     is_dark = "dark" in theme.lower()
     template = "plotly_dark" if is_dark else "plotly"

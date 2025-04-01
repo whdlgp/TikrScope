@@ -1,17 +1,17 @@
-from pathlib import Path
 import pytz
 from PyQt5.QtWidgets import (
     QWidget, QLabel, QRadioButton, QCheckBox, QPushButton,
     QVBoxLayout, QHBoxLayout, QButtonGroup, QListWidget, QListWidgetItem,
-    QSplitter, QLineEdit, QComboBox, QMessageBox, QDialog, QFrame
+    QSplitter, QLineEdit, QComboBox, QMessageBox, QSizePolicy
 )
-from PyQt5.QtCore import QTimer, Qt, QSize, QUrl
-from PyQt5.QtGui import QPixmap, QDesktopServices, QFont
+from PyQt5.QtCore import QTimer, Qt, QSize
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from qt_material import list_themes
 
-from data import fetch_market_data, create_plot_html, create_thumbnail, CONFIG_PATH, load_config, save_config
+from data import fetch_market_data, create_plot_html, create_thumbnail, calculate_price_changes, CONFIG_PATH, load_config, save_config
 from tickernews import build_search_queries, fetch_news_for_queries
+from subui import NewsDialog
 
 def create_thumbnail_widget(ticker, timezone, force_update=False):
     thumb_path = create_thumbnail(ticker, timezone, force_update)
@@ -141,6 +141,11 @@ class StockApp(QWidget):
         self.search_news_btn = QPushButton("Search News")
         self.search_news_btn.clicked.connect(self.search_news)
 
+        self.change_summary = QLabel()
+        self.change_summary.setText("")
+        self.change_summary.setStyleSheet("padding: 2px; font-weight: bold;")
+        self.change_summary.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+
         options_layout = QVBoxLayout()
         options_layout.addLayout(chart_layout)
         options_layout.addLayout(period_layout)
@@ -152,9 +157,13 @@ class StockApp(QWidget):
         refresh_layout.addWidget(self.search_news_btn)
         options_layout.addLayout(refresh_layout)
 
+        chart_layout = QVBoxLayout()
+        chart_layout.addWidget(self.change_summary)
+        chart_layout.addWidget(self.web_view)
+
         right_layout = QVBoxLayout()
         right_layout.addLayout(options_layout)
-        right_layout.addWidget(self.web_view)
+        right_layout.addLayout(chart_layout)
 
         right_widget = QWidget()
         right_widget.setLayout(right_layout)
@@ -243,9 +252,26 @@ class StockApp(QWidget):
             return widget.layout().itemAt(0).widget().text()
         return self.config["tickers"][0]
 
+    def format_change_summary(self, changes):
+        periods = ["1D", "1W", "1M", "6M", "1Y"]
+        parts = []
+        for p, c in zip(periods, changes):
+            if c is None:
+                parts.append(f"{p}: <span style='color:#AAAAAA'>N/A</span>")
+            else:
+                color = "#FF6B6B" if c > 0 else "#4DA3FF"
+                sign = "+" if c > 0 else ""
+                parts.append(f"{p}: <span style='color:{color}'>{sign}{c:.2f}%</span>")
+        return "   ".join(parts)
+
     def update_plot(self):
         ticker = self.get_selected_ticker()
         df = fetch_market_data(ticker, self.config["period"], self.config["timezone"])
+
+        changes = calculate_price_changes(df)
+        self.change_summary.setTextFormat(Qt.RichText)
+        self.change_summary.setText(self.format_change_summary(changes))
+
         html = create_plot_html(
             df, ticker,
             self.config["chart_type"],
@@ -263,64 +289,6 @@ class StockApp(QWidget):
         if not news:
             QMessageBox.information(self, "News", "No news found.")
             return
-
-        class NewsItemWidget(QWidget):
-            def __init__(self, published, title, link):
-                super().__init__()
-
-                time_label = QLabel(published)
-                title_label = QLabel(title)
-                title_label.setWordWrap(True)
-                title_label.setFont(QFont("", weight=QFont.Bold))
-
-                open_button = QPushButton("Open")
-                open_button.setMinimumWidth(60)
-                open_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(link)))
-
-                button_layout = QHBoxLayout()
-                button_layout.addStretch()
-                button_layout.addWidget(open_button)
-
-                inner_layout = QVBoxLayout()
-                inner_layout.addWidget(time_label)
-                inner_layout.addWidget(title_label)
-                inner_layout.addLayout(button_layout)
-                inner_layout.setSpacing(6)
-                inner_layout.setContentsMargins(12, 12, 12, 12)
-
-                frame = QFrame()
-                frame.setLayout(inner_layout)
-                frame.setFrameShape(QFrame.StyledPanel)
-
-                outer_layout = QVBoxLayout()
-                outer_layout.addWidget(frame)
-                outer_layout.setContentsMargins(0, 0, 0, 0)
-                self.setLayout(outer_layout)
-
-        class NewsDialog(QDialog):
-            def __init__(self, news_items, parent=None, ticker=""):
-                super().__init__(parent)
-                self.setWindowTitle(f"News: {ticker}")
-                self.setMinimumSize(750, 600)
-
-                self.list_widget = QListWidget()
-                self.list_widget.setSpacing(8)
-
-                for item in news_items:
-                    published = item["published"].strftime("%Y-%m-%d %H:%M")
-                    title = item["title"]
-                    link = item["link"]
-
-                    widget = NewsItemWidget(published, title, link)
-                    list_item = QListWidgetItem()
-                    list_item.setSizeHint(widget.sizeHint())
-
-                    self.list_widget.addItem(list_item)
-                    self.list_widget.setItemWidget(list_item, widget)
-
-                layout = QVBoxLayout()
-                layout.addWidget(self.list_widget)
-                self.setLayout(layout)
 
         dialog = NewsDialog(news, None, ticker)
         self.news_dialogs = getattr(self, "news_dialogs", [])
