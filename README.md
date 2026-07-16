@@ -6,10 +6,19 @@ A minimal, interactive stock market viewer.
 
 - Line and candlestick chart views  
 - Customizable configuration (time range, timezone, theme, etc.)  
-- Support for multiple indicators (e.g., SMA, VWAP, Williams %R, Stochastic RSI)  
+- Support for multiple indicators (e.g., SMA, VWAP, Williams %R, Stochastic RSI, KAMA, Fisher)
 - Chart thumbnail previews  
 - Auto-refresh (30s)
 - Find related news for a ticker. (Currently a bit slow)
+
+## Install and Run
+
+```
+pip install uv
+uv venv
+uv pip install -r requirements.txt
+uv run python app.py
+```
 
 ## Preview
 
@@ -18,9 +27,3 @@ A minimal, interactive stock market viewer.
 ![{FD9130CF-2CD9-47D3-AD61-7D870A7BF507}](https://github.com/user-attachments/assets/87a72e2b-3c07-489b-af05-0f4a96d5d642)
 ![image](https://github.com/user-attachments/assets/7a4ed87a-b9c8-4992-bfba-ab0928199ceb)
 
-## Install and Run
-
-```
-pip install -r requirements.txt
-python app.py  
-```
