@@ -108,7 +108,7 @@ class StockApp(QWidget):
         indicator_layout = QHBoxLayout()
         self.main_indicator_group = {}
         indicator_layout.setAlignment(Qt.AlignLeft)
-        main_indicators = ["sma5", "sma20", "sma60", "sma120", "vwap"]
+        main_indicators = ["sma5", "sma20", "sma60", "sma120", "vwap", "kama10", "kama20", "kama30"]
         for indicator in main_indicators:
             cb = QCheckBox(indicator.upper())
             cb.setChecked(indicator in self.config.get("main_indicator", []))
@@ -122,7 +122,8 @@ class StockApp(QWidget):
         self.sub_indicators = {
             "williams_r": "Williams %R",
             "mfi": "MFI (Money Flow Index)",
-            "stoch_rsi": "Stochastic RSI"
+            "stoch_rsi": "Stochastic RSI",
+            "fisher": "Fisher Transform"
         }
         for key, label in self.sub_indicators.items():
             rb = QRadioButton(label)

@@ -137,6 +137,33 @@ def add_vwap(fig, df, date_col):
         line=dict(color="purple", width=1)
     ), row=1, col=1)
 
+def add_kama(fig, df, date_col, period=10, fast_period=2, slow_period=30):
+    import numpy as np
+
+    change = df["Close"].diff(period).abs()
+    volatility = df["Close"].diff().abs().rolling(period).sum()
+    er = (change / volatility.replace(0, np.nan)).fillna(0)
+
+    fast_sc = 2.0 / (fast_period + 1)
+    slow_sc = 2.0 / (slow_period + 1)
+    sc = (er * (fast_sc - slow_sc) + slow_sc) ** 2
+
+    kama = [float("nan")] * len(df)
+    kama[period] = df["Close"].iloc[period]
+    for i in range(period + 1, len(df)):
+        kama[i] = kama[i - 1] + sc.iloc[i] * (df["Close"].iloc[i] - kama[i - 1])
+
+    df["KAMA"] = kama
+
+    fig.add_trace(go.Scatter(
+        x=df[date_col],
+        y=df["KAMA"],
+        mode="lines",
+        name=f"KAMA({period})",
+        line=dict(width=1.5)
+    ), row=1, col=1)
+
+
 def add_williams_r(fig, df, date_col, period=14):
     high = df["High"].rolling(period).max()
     low = df["Low"].rolling(period).min()
@@ -239,6 +266,51 @@ def add_stoch_rsi(fig, df, date_col, period=14, smooth_k=3, smooth_d=3):
             row=2, col=1
         )
 
+
+def add_fisher_transform(fig, df, date_col, period=10):
+    import numpy as np
+
+    price = (df["High"] + df["Low"]) / 2
+    hh = price.rolling(period).max()
+    ll = price.rolling(period).min()
+
+    value = 2 * (price - ll) / (hh - ll) - 1
+    value = value.clip(-0.999, 0.999)
+
+    fisher = 0.5 * np.log((1 + value) / (1 - value))
+    signal = fisher.ewm(span=5, adjust=False).mean()
+
+    df["Fisher"] = fisher
+    df["Fisher_Signal"] = signal
+
+    fig.add_trace(go.Scatter(
+        x=df[date_col],
+        y=df["Fisher"],
+        name="Fisher",
+        mode="lines",
+        line=dict(color="cyan", width=1.5)
+    ), row=2, col=1)
+
+    fig.add_trace(go.Scatter(
+        x=df[date_col],
+        y=df["Fisher_Signal"],
+        name="Fisher Signal",
+        mode="lines",
+        line=dict(color="orange", width=2)
+    ), row=2, col=1)
+
+    for level in [-2, -1, 0, 1, 2]:
+        fig.add_shape(
+            type="line",
+            x0=df[date_col].iloc[0],
+            x1=df[date_col].iloc[-1],
+            y0=level,
+            y1=level,
+            line=dict(color="gray", dash="dot"),
+            row=2, col=1
+        )
+
+
 def create_plot_html(df, ticker, chart_type="line", theme="default", main_indicator=[], sub_indicator="williams_r"):
     if df.empty:
         return "<h2>No data available.</h2>"
@@ -255,6 +327,9 @@ def create_plot_html(df, ticker, chart_type="line", theme="default", main_indica
             add_sma(fig, df, [period], date_col)
         elif indicator == "vwap":
             add_vwap(fig, df, date_col)
+        elif "kama" in indicator:
+            period = int(indicator[4:])
+            add_kama(fig, df, date_col, period=period)
 
     if sub_indicator == "williams_r":
         add_williams_r(fig, df, date_col)
@@ -262,5 +337,7 @@ def create_plot_html(df, ticker, chart_type="line", theme="default", main_indica
         add_mfi(fig, df, date_col)
     elif sub_indicator == "stoch_rsi":
         add_stoch_rsi(fig, df, date_col)
+    elif sub_indicator == "fisher":
+        add_fisher_transform(fig, df, date_col)
 
     return fig.to_html(include_plotlyjs='cdn')
