@@ -1,4 +1,5 @@
 import pytz
+import time
 from PyQt5.QtWidgets import (
     QWidget, QLabel, QRadioButton, QCheckBox, QPushButton,
     QVBoxLayout, QHBoxLayout, QButtonGroup, QListWidget, QListWidgetItem,
@@ -205,6 +206,7 @@ class StockApp(QWidget):
             item.setSizeHint(QSize(210, 160))
             self.ticker_list.addItem(item)
             self.ticker_list.setItemWidget(item, item_widget)
+            time.sleep(0.5)
 
     def update_all_thumbnails(self):
         self.populate_thumbnails(force_update=True)

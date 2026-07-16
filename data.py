@@ -32,7 +32,12 @@ def fetch_market_data(ticker: str, period: str, timezone: str = "Asia/Seoul") ->
         "6mo": "1d", "1y": "1d", "5y": "1d"
     }
     interval = interval_map.get(period, "1d")
-    df = yf.download(ticker, period=period, interval=interval, progress=False)
+
+    try:
+        df = yf.download(ticker, period=period, interval=interval, progress=False)
+    except Exception as e:
+        print(f"Failed to download {ticker}: {e}")
+        return pd.DataFrame()
 
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = [col[0] for col in df.columns]
@@ -66,6 +71,9 @@ def create_thumbnail(ticker, timezone="Asia/Seoul", force_update=False):
     return str(thumb_path)
 
 def calculate_price_changes(df):
+    if df.empty:
+        return [None] * 5
+
     latest_price = df["Close"].iloc[-1]
     date_index = df.index
 
