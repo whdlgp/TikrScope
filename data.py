@@ -26,6 +26,12 @@ def save_config(path, config):
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2)
 
+def get_ticker_fullname(ticker: str):
+    ticker_obj = yf.Ticker(ticker)
+    full_name = ticker_obj.info.get('longName', ticker_obj.info.get('shortName', ticker))
+
+    return full_name
+
 def fetch_market_data(ticker: str, period: str, timezone: str = "Asia/Seoul") -> pd.DataFrame:
     interval_map = {
         "1d": "1m", "5d": "1d", "1mo": "1d", "3mo": "1d",
@@ -91,16 +97,18 @@ def calculate_price_changes(df):
 def init_figure(ticker, sub_indicator, theme):
     is_dark = "dark" in theme.lower()
     template = "plotly_dark" if is_dark else "plotly"
+    ticker_full_name = get_ticker_fullname(ticker)
+    title_text = f"{ticker.upper()}<br><span style='font-size: 13px; font-weight: normal;'>({ticker_full_name})</span>"
     fig = make_subplots(
         rows=2, cols=1,
         shared_xaxes=True,
         row_heights=[0.7, 0.3],
         vertical_spacing=0.03,
-        subplot_titles=[f"{ticker.upper()} Chart", sub_indicator.replace('_', ' ').title()]
+        subplot_titles=[title_text, sub_indicator.replace('_', ' ').title()]
     )
     fig.update_layout(
         template=template,
-        margin=dict(t=40, b=40),
+        margin=dict(t=50, b=40),
         dragmode="zoom",
         xaxis_rangeslider_visible=False
     )
