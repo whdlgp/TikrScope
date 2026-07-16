@@ -165,7 +165,12 @@ def add_kama(fig, df, date_col, period=10, fast_period=2, slow_period=30):
     sc = (er * (fast_sc - slow_sc) + slow_sc) ** 2
 
     kama = [float("nan")] * len(df)
-    kama[period] = df["Close"].iloc[period]
+    
+    start_idx = period
+    if len(df) <= period:
+        start_idx = len(df) - 1
+    kama[start_idx] = df["Close"].iloc[start_idx]
+
     for i in range(period + 1, len(df)):
         kama[i] = kama[i - 1] + sc.iloc[i] * (df["Close"].iloc[i] - kama[i - 1])
 
