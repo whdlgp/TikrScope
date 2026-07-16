@@ -22,8 +22,8 @@ uv run python app.py
 
 ## Preview
 
-![{7EFDD37B-F7CA-4798-B0D8-DA806FA3D03C}](https://github.com/user-attachments/assets/50324eab-4f90-4892-8ab5-bd13fdea382d)
-![{E7324553-1ECE-44AC-8E8F-0CC0A417160C}](https://github.com/user-attachments/assets/65aa1862-8685-4c55-a9bd-92a8c92912de)
-![{FD9130CF-2CD9-47D3-AD61-7D870A7BF507}](https://github.com/user-attachments/assets/87a72e2b-3c07-489b-af05-0f4a96d5d642)
-![image](https://github.com/user-attachments/assets/7a4ed87a-b9c8-4992-bfba-ab0928199ceb)
-
+![sample_20260716](https://github.com/user-attachments/assets/150e5a70-0c68-484e-bd3d-5df737723b3c)
+![sample_old1](https://github.com/user-attachments/assets/50324eab-4f90-4892-8ab5-bd13fdea382d)
+![sample_old2](https://github.com/user-attachments/assets/65aa1862-8685-4c55-a9bd-92a8c92912de)
+![sample_old3](https://github.com/user-attachments/assets/87a72e2b-3c07-489b-af05-0f4a96d5d642)
+![new_search](https://github.com/user-attachments/assets/7a4ed87a-b9c8-4992-bfba-ab0928199ceb)
